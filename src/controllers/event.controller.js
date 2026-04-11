@@ -20,12 +20,22 @@ const getEventById = async (req, res, next) => {
   }
 };
 
-const createEvent = async (req, res, next) => {
+/* const createEvent = async (req, res, next) => {
   try {
     const event = await eventService.createEvent({
       ...req.body,
       organizer: req.user._id
     });
+
+    res.status(201).json({ success: true, data: event });
+  } catch (err) {
+    next(err);
+  }
+}; */
+const createEvent = async (req, res, next) => {
+  try {
+    // Just pass req.body directly to the service
+    const event = await eventService.createEvent(req.body);
 
     res.status(201).json({ success: true, data: event });
   } catch (err) {

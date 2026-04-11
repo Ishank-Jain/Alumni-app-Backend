@@ -22,10 +22,9 @@ const getJobById = async (req, res, next) => {
 
 const createJob = async (req, res, next) => {
   try {
-    const job = await jobService.createJob({
-      ...req.body,
-      postedBy: req.user._id
-    });
+    // Simply pass req.body directly to the service. 
+    // We removed postedBy: req.user._id
+    const job = await jobService.createJob(req.body);
 
     res.status(201).json({ success: true, data: job });
   } catch (err) {

@@ -20,12 +20,22 @@ const getMentorshipById = async (req, res, next) => {
   }
 };
 
+// const createMentorship = async (req, res, next) => {
+//   try {
+//     const data = await mentorshipService.createMentorship({
+//       ...req.body,
+//       mentor: req.user._id
+//     });
+
+//     res.status(201).json({ success: true, data });
+//   } catch (err) {
+//     next(err);
+//   }
+// };
 const createMentorship = async (req, res, next) => {
   try {
-    const data = await mentorshipService.createMentorship({
-      ...req.body,
-      mentor: req.user._id
-    });
+    // Just pass req.body directly to the service
+    const data = await mentorshipService.createMentorship(req.body);
 
     res.status(201).json({ success: true, data });
   } catch (err) {

@@ -10,10 +10,11 @@ const { protect } = require('../../middlewares/auth.middleware');
 // Public
 router.get('/', mentorshipController.getAllMentorships);
 router.get('/:id', mentorshipController.getMentorshipById);
+router.post('/', mentorshipController.createMentorship);
 
 // Protected
-router.post('/', protect, mentorshipController.createMentorship);
-router.put('/:id', protect, mentorshipController.updateMentorship);
-router.delete('/:id', protect, mentorshipController.deleteMentorship);
+// router.post('/', protect, mentorshipController.createMentorship);
+// router.put('/:id', protect, mentorshipController.updateMentorship);
+// router.delete('/:id', protect, mentorshipController.deleteMentorship);
 
 module.exports = router;

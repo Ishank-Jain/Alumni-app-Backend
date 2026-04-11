@@ -10,10 +10,12 @@ const { protect } = require('../../middlewares/auth.middleware');
 // Public
 router.get('/', eventController.getAllEvents);
 router.get('/:id', eventController.getEventById);
+router.post('/', eventController.createEvent);
+
 
 // Protected
-router.post('/', protect, eventController.createEvent);
-router.put('/:id', protect, eventController.updateEvent);
-router.delete('/:id', protect, eventController.deleteEvent);
+// router.post('/', protect, eventController.createEvent);
+// router.put('/:id', protect, eventController.updateEvent);
+// router.delete('/:id', protect, eventController.deleteEvent);
 
 module.exports = router;
