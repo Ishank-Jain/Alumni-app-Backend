@@ -1,4 +1,4 @@
-const Mentorship = require('../models/mentorship.model');
+const Mentorship = require('../models/Mentorship.model.js');
 
 // GET all
 const getMentorships = async (filters) => {

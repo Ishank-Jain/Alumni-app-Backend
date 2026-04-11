@@ -1,4 +1,4 @@
-const Event = require('../models/event.model');
+const Event = require('../models/Event.model.js');
 
 // GET all
 const getEvents = async (filters) => {

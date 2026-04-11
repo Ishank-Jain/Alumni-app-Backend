@@ -1,4 +1,4 @@
-const Job = require('../models/Job.model');
+const Job = require('../models/Job.model.js');
 
 // GET all
 const getJobs = async (filters) => {
