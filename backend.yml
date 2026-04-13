@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alumni-backend
+  template:
+    metadata:
+      labels:
+        app: alumni-backend
+    spec:
+      containers:
+      - name: backend
+        image: alumni-backend:1.0 # Ensure this image is accessible to your Kubeadm worker nodes
+        imagePullPolicy: IfNotPresent 
+        ports:
+        - containerPort: 8000
+        env:
+        - name: PORT
+          value: "8000"
+        - name: MONGO_URI
+          value: "mongodb://mongodb-service:27017/alumni_db"
+        - name: NODE_ENV
+          value: "development"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+spec:
+  type: NodePort # Exposes the API to the outside browser
+  selector:
+    app: alumni-backend
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+      nodePort: 30000
