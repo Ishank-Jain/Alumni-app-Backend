@@ -1,20 +1,32 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const jobController = require('../../controllers/job.controller');
-// Temporarily comment out the protect middleware
-// const { protect } = require('../../middlewares/auth.middleware');
+
+const jobController = require("../../controllers/job.controller");
+
+const verifyToken = require("../../middlewares/verifyToken");
+const checkRole = require("../../middlewares/checkRole");
 
 /**
  * Job Routes — /api/v1/jobs
  */
 
-// Public
-router.get('/', jobController.getAllJobs);
-router.get('/:id', jobController.getJobById);
+/* ---------- Public Routes ---------- */
 
-// Temporarily make these public for database testing
-router.post('/', jobController.createJob);
-router.put('/:id', jobController.updateJob);
-router.delete('/:id', jobController.deleteJob);
+// Anyone logged in can view jobs
+router.get("/", verifyToken, jobController.getAllJobs);
+
+// Anyone logged in can view single job
+router.get("/:id", verifyToken, jobController.getJobById);
+
+/* ---------- Admin Protected Routes ---------- */
+
+// Only admin can create job
+router.post("/", verifyToken, checkRole("admin"), jobController.createJob);
+
+// Only admin can update job
+router.put("/:id", verifyToken, checkRole("admin"), jobController.updateJob);
+
+// Only admin can delete job
+router.delete("/:id", verifyToken, checkRole("admin"), jobController.deleteJob);
 
 module.exports = router;

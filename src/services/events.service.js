@@ -1,34 +1,143 @@
-const Event = require('../models/Event.model.js');
+const Event = require("../models/Event.model.js");
 
-// GET all
+/**
+ * GET ALL EVENTS
+ * Filters:
+ * search
+ * status
+ * mode
+ * visibility
+ * upcoming
+ * page
+ * limit
+ */
+
 const getEvents = async (filters) => {
   const query = {};
 
+  /**
+   * Search by title / description / location
+   */
   if (filters.search) {
-    query.title = { $regex: filters.search, $options: 'i' };
+    query.$or = [
+      {
+        title: {
+          $regex: filters.search,
+          $options: "i",
+        },
+      },
+      {
+        description: {
+          $regex: filters.search,
+          $options: "i",
+        },
+      },
+      {
+        location: {
+          $regex: filters.search,
+          $options: "i",
+        },
+      },
+    ];
   }
 
-  return await Event.find(query);
+  /**
+   * Status filter
+   */
+  if (filters.status) {
+    query.status = filters.status;
+  }
+
+  /**
+   * Mode filter
+   */
+  if (filters.mode) {
+    query.mode = filters.mode;
+  }
+
+  /**
+   * Visibility filter
+   */
+  if (filters.visibility) {
+    query.visibility =
+      filters.visibility;
+  }
+
+  /**
+   * Upcoming only
+   */
+  if (filters.upcoming === "true") {
+    query.date = {
+      $gte: new Date(),
+    };
+  }
+
+  const page =
+    parseInt(filters.page) || 1;
+
+  const limit =
+    parseInt(filters.limit) || 10;
+
+  const skip = (page - 1) * limit;
+
+  const events = await Event.find(query)
+    .sort({ date: 1 })
+    .skip(skip)
+    .limit(limit);
+
+  return events;
 };
 
-// GET by ID
+/**
+ * GET EVENT BY ID
+ */
 const getEventById = async (id) => {
   return await Event.findById(id);
 };
 
-// CREATE
+/**
+ * CREATE EVENT
+ */
 const createEvent = async (data) => {
   return await Event.create(data);
 };
 
-// UPDATE
-const updateEvent = async (id, data) => {
-  return await Event.findByIdAndUpdate(id, data, { new: true });
+/**
+ * UPDATE EVENT
+ */
+const updateEvent = async (
+  id,
+  data
+) => {
+  return await Event.findByIdAndUpdate(
+    id,
+    data,
+    {
+      new: true,
+      runValidators: true,
+    }
+  );
 };
 
-// DELETE
+/**
+ * DELETE EVENT
+ */
 const deleteEvent = async (id) => {
   return await Event.findByIdAndDelete(id);
+};
+
+/**
+ * GET MY EVENTS
+ * based on keycloak sub
+ */
+const getMyEvents = async (
+  subId
+) => {
+  return await Event.find({
+    createdBySub: subId,
+  }).sort({
+    createdAt: -1,
+  });
 };
 
 module.exports = {
@@ -37,4 +146,5 @@ module.exports = {
   createEvent,
   updateEvent,
   deleteEvent,
+  getMyEvents,
 };

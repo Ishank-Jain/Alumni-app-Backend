@@ -1,20 +1,87 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const mentorshipController = require('../../controllers/mentorship.controller');
-const { protect } = require('../../middlewares/auth.middleware');
+
+const mentorshipController = require("../../controllers/mentorship.controller");
+
+const verifyToken = require("../../middlewares/verifyToken");
+
+const syncMongoUser = require("../../middlewares/syncMongoUser");
+
+const checkRole = require("../../middlewares/checkRole");
 
 /**
- * Mentorship Routes — /api/v1/mentorships
+ * Mentorship Routes
+ * /api/v1/mentorship
  */
 
-// Public
-router.get('/', mentorshipController.getAllMentorships);
-router.get('/:id', mentorshipController.getMentorshipById);
-router.post('/', mentorshipController.createMentorship);
+/* ---------------- PUBLIC ---------------- */
 
-// Protected
-// router.post('/', protect, mentorshipController.createMentorship);
-// router.put('/:id', protect, mentorshipController.updateMentorship);
-// router.delete('/:id', protect, mentorshipController.deleteMentorship);
+/**
+ * Get all approved mentors
+ */
+router.get("/", mentorshipController.getAllMentorships);
+
+/**
+ * Get mentor by id
+ */
+router.get("/:id", mentorshipController.getMentorshipById);
+
+/* -------------- PROTECTED --------------- */
+
+/**
+ * My mentorship profile
+ */
+router.get(
+  "/me/profile",
+  verifyToken,
+  syncMongoUser,
+  mentorshipController.getMyMentorship,
+);
+
+/**
+ * Become mentor / create profile
+ * student / alumni / admin
+ */
+router.post(
+  "/",
+  verifyToken,
+  syncMongoUser,
+  checkRole("student", "alumni", "admin"),
+  mentorshipController.createMentorship,
+);
+
+/**
+ * Update own profile
+ */
+router.put(
+  "/:id",
+  verifyToken,
+  syncMongoUser,
+  checkRole("student", "alumni", "mentor", "admin"),
+  mentorshipController.updateMentorship,
+);
+
+/**
+ * Delete own profile
+ */
+router.delete(
+  "/:id",
+  verifyToken,
+  syncMongoUser,
+  checkRole("student", "alumni", "mentor", "admin"),
+  mentorshipController.deleteMentorship,
+);
+
+/**
+ * Approve / Reject mentor
+ * admin only
+ */
+router.patch(
+  "/:id/status",
+  verifyToken,
+  syncMongoUser,
+  checkRole("admin"),
+  mentorshipController.updateMentorshipStatus,
+);
 
 module.exports = router;
