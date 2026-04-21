@@ -9,6 +9,11 @@ pipeline {
     }
 
     stages {
+        stage('Prepare') {
+            steps{
+                sh "git config --global --add safe.directory '*'"
+            }
+        }
         stage('Checkout') {
             steps {
                 // This stays the same
