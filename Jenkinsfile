@@ -28,15 +28,15 @@ pipeline {
             steps {
                 // This will work because the 'node' environment is 
                 // inside your Dockerfile, not on the Jenkins host.
-                sh "docker build -t ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG} ."
+                sh "/usr/local/bin/docker build -t ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG} ."
             }
         }
 
         stage('Nexus Authentication & Push') {
             steps {
                 script {
-                    sh "echo ${NEXUS_CREDS_PSW} | docker login ${REGISTRY_URL} -u ${NEXUS_CREDS_USR} --password-stdin"
-                    sh "docker push ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}"
+                    sh "echo ${NEXUS_CREDS_PSW} | /usr/local/bin/docker login ${REGISTRY_URL} -u ${NEXUS_CREDS_USR} --password-stdin"
+                    sh " /usr/local/bin/docker push ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}"
                 }
             }
         }
@@ -44,7 +44,7 @@ pipeline {
     
     post {
         always {
-            sh " docker logout ${REGISTRY_URL}"
+            sh " /usr/local/bin/docker logout ${REGISTRY_URL}"
             cleanWs()
         }
     }
