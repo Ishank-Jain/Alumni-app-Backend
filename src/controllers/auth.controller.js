@@ -59,4 +59,11 @@ const refreshToken = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, logout, refreshToken };
+const me = async (req, res) => {
+  res.json({
+    success: true,
+    data: req.dbUser,
+  });
+};
+
+module.exports = { register, login, logout, refreshToken, me };

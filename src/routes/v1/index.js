@@ -1,5 +1,5 @@
-const express = require('express')
-const router = express.Router()
+const express = require("express");
+const router = express.Router();
 
 /**
  * v1 Router — aggregates all route modules
@@ -12,10 +12,11 @@ const router = express.Router()
  * router.use('/events', require('./event.routes'))
  */
 
-router.use('/auth', require('./auth.routes'))
-router.use('/users',      require('./user.routes'))
-router.use('/mentorship', require('./mentorship.routes'))
-router.use('/jobs',       require('./job.routes'))
-router.use('/events',     require('./event.routes'))
+router.use("/auth", require("./auth.routes"));
+router.use("/users", require("./user.routes"));
+router.use("/mentorship", require("./mentorship.routes"));
+router.use("/jobs", require("./job.routes"));
+router.use("/events", require("./event.routes"));
+router.use("/admin", require("./admin.routes"));
 
-module.exports = router
+module.exports = router;

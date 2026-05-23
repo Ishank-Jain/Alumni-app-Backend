@@ -2,28 +2,22 @@ const User = require("../models/User.model");
 
 const syncMongoUser = async (req, res, next) => {
   try {
-    if (!req.user || !req.user.sub) {
-      return res.status(401).json({
-        message: "Unauthorized",
-      });
-    }
-
     const token = req.user;
+
     const sub = token.sub;
+
+    const roles = token.realm_access?.roles || [];
+
+    let appRole = "student";
+
+    if (roles.includes("admin")) appRole = "admin";
+    else if (roles.includes("mentor")) appRole = "mentor";
+    // else if (roles.includes("recruiter")) appRole = "recruiter";
+    else if (roles.includes("alumni")) appRole = "alumni";
 
     let user = await User.findOne({
       keycloakSub: sub,
     });
-
-    const keycloakRoles = token.realm_access?.roles || [];
-
-    const appRole = keycloakRoles.includes("admin")
-      ? "admin"
-      : keycloakRoles.includes("alumni")
-        ? "alumni"
-        : keycloakRoles.includes("mentor")
-          ? "mentor"
-          : "user";
 
     if (!user) {
       user = await User.create({
@@ -33,18 +27,20 @@ const syncMongoUser = async (req, res, next) => {
         firstName: token.given_name || "",
         lastName: token.family_name || "",
         role: appRole,
-        isVerified: false,
-        profileCompleted: false,
-        companyApproved: false,
-        banned: false,
+        status: "pending",
         lastLoginAt: new Date(),
       });
     } else {
       user.username = token.preferred_username;
+
       user.email = token.email;
+
       user.firstName = token.given_name || "";
+
       user.lastName = token.family_name || "";
+
       user.role = appRole;
+
       user.lastLoginAt = new Date();
 
       await user.save();
@@ -52,7 +48,8 @@ const syncMongoUser = async (req, res, next) => {
 
     if (user.banned) {
       return res.status(403).json({
-        message: "Your account is blocked",
+        success: false,
+        message: "Account banned",
       });
     }
 
@@ -60,6 +57,7 @@ const syncMongoUser = async (req, res, next) => {
 
     next();
   } catch (error) {
+    console.log("SYNC ERROR:", error);
     next(error);
   }
 };

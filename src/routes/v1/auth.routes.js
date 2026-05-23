@@ -1,21 +1,22 @@
-const express = require('express')
-const router = express.Router()
-const authController = require('../../controllers/auth.controller')
-const { protect } = require('../../middlewares/auth.middleware')
+const express = require("express");
+const router = express.Router();
 
-/**
- * Auth Routes — /api/v1/auth
- *
- * Public routes  → no middleware needed
- * Private routes → protect middleware required
- */
+const authController = require("../../controllers/auth.controller");
 
-// ─── Public ──────────────────────────────────────────────────────────────────
-router.post('/register', authController.register)
-router.post('/login', authController.login)
-router.post('/refresh-token', authController.refreshToken)
+const verifyToken = require("../../middlewares/verifyToken");
+const syncMongoUser = require("../../middlewares/syncMongoUser");
 
-// ─── Protected ────────────────────────────────────────────────────────────────
-// router.post('/logout', protect, authController.logout)
+// Public
+router.post("/register", authController.register);
+router.post("/login", authController.login);
+router.post("/refresh-token", authController.refreshToken);
 
-module.exports = router
+// Protected Bootstrap Route
+router.get(
+  "/me",
+  verifyToken,
+  syncMongoUser,
+  authController.me
+);
+
+module.exports = router;

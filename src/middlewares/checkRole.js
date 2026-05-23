@@ -1,20 +1,27 @@
 const checkRole = (...allowedRoles) => {
-  return async (req, res, next) => {
-    const roles = req.user.realm_access?.roles || [];
+  return (req, res, next) => {
+    try {
+      const userRoles =
+        req.user?.realm_access?.roles || [];
 
-    const allowed = allowedRoles.some(role =>
-      roles.includes(role)
-    );
+      const allowed = allowedRoles.some((role) =>
+        userRoles.includes(role)
+      );
 
-    if (!allowed) {
-      return res.status(403).json({
-        message: "Forbidden: insufficient permissions",
-        userRoles,
-        requiredRoles: allowedRoles
-      });
+      if (!allowed) {
+        return res.status(403).json({
+          success: false,
+          message: "Forbidden: insufficient permissions",
+          requiredRoles: allowedRoles,
+          userRoles,
+        });
+      }
+
+      next();
+    } catch (error) {
+      console.log(error);
+      next(error);
     }
-
-    next();
   };
 };
 
