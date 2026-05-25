@@ -45,16 +45,18 @@ const getEventById = async (req, res, next) => {
  * Protected:
  * verifyToken -> syncMongoUser -> checkRole
  */
+
 const createEvent = async (req, res, next) => {
   try {
     const payload = {
       ...req.body,
+      
+      // Map the frontend property to the MongoDB schema property
+      bannerImage: req.body.imageUrl || "", 
 
       createdByUserId: req.dbUser._id,
       createdBySub: req.dbUser.keycloakSub,
-
       organizerName: `${req.dbUser.firstName || ""} ${req.dbUser.lastName || ""}`.trim(),
-
       organizerEmail: req.dbUser.email,
     };
 
