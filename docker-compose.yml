@@ -1,0 +1,20 @@
+services:
+  backend:
+    build: .
+    container_name: alumni-backend
+    restart: on-failure
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      # Updated URI with credentials and the authSource parameter
+      - MONGO_URI=mongodb://admin:adminpassword@alumni-mongo:27017/alumni_db?authSource=admin
+      - NODE_ENV=development
+      # We will add Keycloak/Kafka URLs here next if your backend env requires them
+    networks:
+      - alumni-network
+
+# Connect to the external network created in Phase 1
+networks:
+  alumni-network:
+    external: true

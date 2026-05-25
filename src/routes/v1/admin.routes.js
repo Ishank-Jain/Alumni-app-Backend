@@ -27,9 +27,9 @@ router.get(
 
 router.patch(
   "/users/:id/approve",
-  verifyToken,
-  syncMongoUser,
-  checkRole("admin"),
+  // verifyToken,
+  // syncMongoUser,
+  // checkRole("admin"),
   adminController.approveUser,
 );
 
@@ -39,6 +39,15 @@ router.patch(
   syncMongoUser,
   checkRole("admin"),
   adminController.rejectUser,
+);
+
+//delete user
+router.delete(
+  "/users/:id",
+  verifyToken,
+  syncMongoUser,
+  checkRole("admin"),
+  adminController.deleteUser
 );
 
 module.exports = router;
