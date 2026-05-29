@@ -1,9 +1,12 @@
 const jwt = require("jsonwebtoken");
 const jwksClient = require("jwks-rsa");
 
-// 1. Fetch keys using the internal Docker container name 'alumni-keycloak' and the correct realm
+// 1. Use an environment variable for the internal Kubernetes Keycloak service URL
+// Fallback to localhost for local development
+const jwksUri = process.env.KEYCLOAK_JWKS_URI || "http://localhost:8080/realms/application/protocol/openid-connect/certs";
+
 const client = jwksClient({
-  jwksUri: "http://alumni-keycloak:8080/realms/application/protocol/openid-connect/certs",
+  jwksUri: jwksUri,
   cache: true,
   cacheMaxEntries: 5,
   cacheMaxAge: 600000
@@ -30,13 +33,16 @@ const verifyToken = async (req, res, next) => {
 
     const token = authHeader.split(" ")[1];
 
+    // 2. Use an environment variable for the Issuer
+    // The issuer must EXACTLY match the URL the frontend used to authenticate
+    const issuer = process.env.KEYCLOAK_ISSUER || "http://localhost:8080/realms/application";
+
     jwt.verify(
       token,
       getKey,
       {
         algorithms: ["RS256"],
-        // 2. The issuer must match what the React app sees in the browser (localhost)
-        issuer: "http://localhost:8080/realms/application"
+        issuer: issuer
       },
       (err, decoded) => {
         if (err) {
@@ -45,10 +51,6 @@ const verifyToken = async (req, res, next) => {
         }
 
         req.user = decoded;
-        
-        // 3. Removed the broken Postgres pool.query block. 
-        // We rely entirely on your existing syncMongoUser middleware to handle database sync!
-        
         next();
       }
     );
