@@ -44,9 +44,12 @@ const approveUser = async (req, res, next) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    // PUBLISH NOTIFICATION TO EMAIL AND SLACK
+// PUBLISH NOTIFICATION TO EMAIL AND SLACK
     try {
-      await fetch('http://notification-api:3000/api/v1/notify', {
+      // Use the environment variable, fallback to localhost for local dev
+      const notificationUrl = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3000';
+
+      await fetch(`${notificationUrl}/api/v1/notify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -122,6 +125,8 @@ const me = async (req, res) => {
 };
 
 
+// In src/controllers/admin.controller.js
+
 const deleteUser = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id);
@@ -129,16 +134,19 @@ const deleteUser = async (req, res, next) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
+    // Use environment variable for Keycloak internal URL
+    const keycloakInternalUrl = process.env.KEYCLOAK_INTERNAL_URL || "http://localhost:8080";
+
     // 1. Authenticate with Keycloak's Master Realm to get an Admin Token
     try {
-      const tokenResponse = await fetch("http://alumni-keycloak:8080/realms/master/protocol/openid-connect/token", {
+      const tokenResponse = await fetch(`${keycloakInternalUrl}/realms/master/protocol/openid-connect/token`, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
           client_id: "admin-cli",
           grant_type: "password",
-          username: "admin",      // Assuming default compose credentials
-          password: "admin"
+          username: process.env.KEYCLOAK_ADMIN || "admin",
+          password: process.env.KEYCLOAK_ADMIN_PASSWORD || "admin"
         })
       });
 
@@ -146,7 +154,7 @@ const deleteUser = async (req, res, next) => {
         const { access_token } = await tokenResponse.json();
         
         // 2. Delete the user from your 'application' realm
-        await fetch(`http://alumni-keycloak:8080/admin/realms/application/users/${user.keycloakSub}`, {
+        await fetch(`${keycloakInternalUrl}/admin/realms/application/users/${user.keycloakSub}`, {
           method: "DELETE",
           headers: { "Authorization": `Bearer ${access_token}` }
         });

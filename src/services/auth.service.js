@@ -19,25 +19,29 @@ const registerUser = async ({ firstName, lastName, username, email, keycloakSub,
   });
 
   // PUBLISH TO NOTIFICATION SHIM LAYER (Which forwards to Kafka)
- try {
-    // Calling the correct route on the internal Docker network
-    await fetch('http://notification-api:3000/api/v1/notify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        channels: ['email'], // Tell ONLY the email worker to fire
-        recipients: [user.email], // Send to the registered user
-        priority: 'normal',
-        payload: {
-          title: 'Account Verification Pending',
-          body: `Hello ${user.firstName}, your registration has been received. Your ID is currently being verified by the admin team. You will receive another notification once you are approved.`
-        }
-      })
-    });
-    console.log("Pending verification event published to Notification API");
-  } catch (error) {
-    console.error("Failed to publish event:", error.message);
-  }
+// PUBLISH TO NOTIFICATION SHIM LAYER (Which forwards to Kafka)
+try {
+  // Use the environment variable, fallback to localhost for local dev
+  const notificationUrl = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3000'; 
+  //if using docker network can use:  http://notification-api:3000/api/v1/notify
+
+  await fetch(`${notificationUrl}/api/v1/notify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      channels: ['email'], 
+      recipients: [user.email], 
+      priority: 'normal',
+      payload: {
+        title: 'Account Verification Pending',
+        body: `Hello ${user.firstName}, your registration has been received. Your ID is currently being verified by the admin team. You will receive another notification once you are approved.`
+      }
+    })
+  });
+  console.log("Pending verification event published to Notification API");
+} catch (error) {
+  console.error("Failed to publish event:", error.message);
+}
 
   return { user: user.toPublicJSON() };
 };
