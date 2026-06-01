@@ -9,7 +9,7 @@ pipeline {
         
         // Ensure these IDs match exactly what you named them in Jenkins Credentials
         NEXUS_CREDS = credentials('nexus-creds')
-        GIT_PAT = credentials('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') // You need to add this credential to Jenkins!
+        GIT_PAT = credentials('github-pat') // You need to add this credential to Jenkins!
         
         // The URL of your INFRASTRUCTURE repository (where your Helm charts live)
         INFRA_REPO_URL = "github.com/Riyag012/git-infra-repo.git"
