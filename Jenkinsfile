@@ -50,17 +50,20 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                // Assuming Docker is available on the Jenkins agent
-                sh "docker build -t ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG} ."
+                // THIS is the line that tells Jenkins to switch containers!
+                container('docker') {
+                    sh "docker build -t ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG} ."
+                }
             }
         }
 
         stage('Push to Nexus') {
             steps {
-                script {
-                    // Authenticate and Push using the pipeline credentials
-                    sh "echo ${NEXUS_CREDS_PSW} | docker login ${REGISTRY_URL} -u ${NEXUS_CREDS_USR} --password-stdin"
-                    sh "docker push ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}"
+                container('docker') {
+                    script {
+                        sh "echo ${NEXUS_CREDS_PSW} | docker login ${REGISTRY_URL} -u ${NEXUS_CREDS_USR} --password-stdin"
+                        sh "docker push ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}"
+                    }
                 }
             }
         }
@@ -100,8 +103,10 @@ pipeline {
     
     post {
         always {
-            // Clean up Docker credentials and workspace
-            sh "docker logout ${REGISTRY_URL}"
+            // Must logout inside the docker container
+            container('docker') {
+                sh "docker logout ${REGISTRY_URL} || true"
+            }
             cleanWs()
         }
     }
