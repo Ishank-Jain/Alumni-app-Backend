@@ -18,6 +18,7 @@ pipeline {
               # 2. The Docker Engine (The private sidecar)
               - name: dind
                 image: docker:dind
+                args: ["--insecure-registry=192.168.41.90:8082"]
                 securityContext:
                   privileged: true
                 env:
@@ -65,8 +66,8 @@ pipeline {
             steps {
                 container('docker') {
                     script {
-                        sh "echo ${NEXUS_CREDS_PSW} | docker login ${REGISTRY_URL} -u ${NEXUS_CREDS_USR} --password-stdin"
-                        sh "docker push ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}"
+                        sh 'echo ${NEXUS_CREDS_PSW} | docker login ${REGISTRY_URL} -u ${NEXUS_CREDS_USR} --password-stdin'
+                        sh 'docker push ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}'
                     }
                 }
             }
