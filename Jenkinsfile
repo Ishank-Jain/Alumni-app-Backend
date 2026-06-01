@@ -6,35 +6,36 @@ pipeline {
             kind: Pod
             spec:
               containers:
+              # 1. The Docker CLI (Where your commands run)
               - name: docker
                 image: docker:cli
                 command: ['cat']
                 tty: true
+                env:
+                - name: DOCKER_HOST
+                  value: tcp://localhost:2375
+                  
+              # 2. The Docker Engine (The private sidecar)
+              - name: dind
+                image: docker:dind
                 securityContext:
-                  runAsUser: 0
-                volumeMounts:
-                - mountPath: /var/run/docker.sock
-                  name: docker-sock
-              volumes:
-              - name: docker-sock
-                hostPath:
-                  path: /var/run/docker.sock
+                  privileged: true
+                env:
+                - name: DOCKER_TLS_CERTDIR
+                  value: ""
             '''
         }
     }
     
     environment {
-        // 1. Updated to your direct Nexus Docker IP
         REGISTRY_URL = "192.168.41.90:8082" 
-        IMAGE_NAME = "alumni-backend" // Removed the slash to keep it standard
+        IMAGE_NAME = "alumni-backend"
         IMAGE_TAG = "v${BUILD_NUMBER}"
         
-        // Ensure these IDs match exactly what you named them in Jenkins Credentials
         NEXUS_CREDS = credentials('nexus-creds')
-        GIT_PAT = credentials('github-pat') // You need to add this credential to Jenkins!
+        GIT_PAT = credentials('github-pat') 
         
-        // The URL of your INFRASTRUCTURE repository (where your Helm charts live)
-        INFRA_REPO_URL = "github.com/Riyag012/git-infra-repo.git"
+        INFRA_REPO_URL = "github.com/Riyag012/git-infra-repo-main.git"
     }
 
     stages {
@@ -52,8 +53,9 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                // THIS is the line that tells Jenkins to switch containers!
                 container('docker') {
+                    // Added a brief sleep to ensure the DinD sidecar is fully awake before connecting
+                    sh "sleep 10" 
                     sh "docker build -t ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG} ."
                 }
             }
@@ -73,29 +75,21 @@ pipeline {
         stage('GitOps: Update Infra Repo') {
             steps {
                 script {
-                    // We need a temporary directory to clone the infra repo without wiping out the backend code
                     dir('infra-repo-tmp') {
-                        // 1. Securely clone the infra repo using the PAT
                         sh "git clone https://${GIT_PAT_USR}:${GIT_PAT_PSW}@${INFRA_REPO_URL} ."
-                        
-                        // 2. Configure Git user for the commit
                         sh "git config user.email 'jenkins@alumnilab.local'"
                         sh "git config user.name 'Jenkins Pipeline'"
                         
-                        // 3. Update the Image Tag inside the backend values.yaml file using 'sed'
-                        // Make sure this path is exactly where your backend values.yaml lives inside the infra repo!
                         def valuesFile = "charts/alumni-backend/values.yaml"
                         
                         sh """
-                           # Find the line starting with 'tag:' and replace it with the new build number
                            sed -i 's/tag: .*/tag: \"${IMAGE_TAG}\"/' ${valuesFile}
                         """
                         
-                        // 4. Commit and Push back to GitHub
                         sh """
                            git add ${valuesFile}
                            git commit -m "Automated CI/CD: Update backend tag to ${IMAGE_TAG}"
-                           git push origin mainw
+                           git push origin main
                         """
                     }
                 }
