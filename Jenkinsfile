@@ -35,7 +35,7 @@ pipeline {
         NEXUS_CREDS = credentials('nexus-creds')
         GIT_PAT = credentials('github-pat') 
         
-        INFRA_REPO_URL = "github.com/Riyag012/git-infra-repo-main.git"
+        INFRA_REPO_URL = "github.com/Riyag012/git-infra-repo"
     }
 
     stages {
