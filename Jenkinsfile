@@ -10,6 +10,8 @@ pipeline {
                 image: docker:cli
                 command: ['cat']
                 tty: true
+                securityContext:
+                  runAsUser: 0      # <-- ADD THIS LINE to fix permissions
                 volumeMounts:
                 - mountPath: /var/run/docker.sock
                   name: docker-sock
@@ -19,7 +21,7 @@ pipeline {
                   path: /var/run/docker.sock
             '''
         }
-    } 
+    }
     
     environment {
         // 1. Updated to your direct Nexus Docker IP
@@ -103,11 +105,10 @@ pipeline {
     
     post {
         always {
-            // Must logout inside the docker container
             container('docker') {
                 sh "docker logout ${REGISTRY_URL} || true"
             }
-            cleanWs()
+            deleteDir()  # <-- CHANGED from cleanWs()
         }
     }
 }
