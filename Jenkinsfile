@@ -1,11 +1,18 @@
 pipeline {
-    agent any // Stick to 'any' to avoid the mounting issues you saw earlier
+    agent any 
     
     environment {
-        REGISTRY_URL = "192.168.81.131:30010"
-        IMAGE_NAME = "alumni-app/backend"
+        // 1. Updated to your direct Nexus Docker IP
+        REGISTRY_URL = "192.168.41.90:8082" 
+        IMAGE_NAME = "alumni-backend" // Removed the slash to keep it standard
         IMAGE_TAG = "v${BUILD_NUMBER}"
+        
+        // Ensure these IDs match exactly what you named them in Jenkins Credentials
         NEXUS_CREDS = credentials('nexus-creds')
+        GIT_PAT = credentials('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') // You need to add this credential to Jenkins!
+        
+        // The URL of your INFRASTRUCTURE repository (where your Helm charts live)
+        INFRA_REPO_URL = "github.com/Riyag012/git-infra-repo.git"
     }
 
     stages {
@@ -14,29 +21,58 @@ pipeline {
                 sh "git config --global --add safe.directory '*'"
             }
         }
+        
         stage('Checkout') {
             steps {
-                // This stays the same
                 checkout scm 
             }
         }
 
-        // REMOVE the "Environment Check" stage that calls 'node --version'
-        // Or wrap it inside a docker run command if you MUST check it
-
         stage('Build Docker Image') {
             steps {
-                // This will work because the 'node' environment is 
-                // inside your Dockerfile, not on the Jenkins host.
-                sh "/usr/local/bin/docker build -t ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG} ."
+                // Assuming Docker is available on the Jenkins agent
+                sh "docker build -t ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG} ."
             }
         }
 
-        stage('Nexus Authentication & Push') {
+        stage('Push to Nexus') {
             steps {
                 script {
-                    sh "echo ${NEXUS_CREDS_PSW} | /usr/local/bin/docker login ${REGISTRY_URL} -u ${NEXUS_CREDS_USR} --password-stdin"
-                    sh " /usr/local/bin/docker push ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}"
+                    // Authenticate and Push using the pipeline credentials
+                    sh "echo ${NEXUS_CREDS_PSW} | docker login ${REGISTRY_URL} -u ${NEXUS_CREDS_USR} --password-stdin"
+                    sh "docker push ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}"
+                }
+            }
+        }
+
+        stage('GitOps: Update Infra Repo') {
+            steps {
+                script {
+                    // We need a temporary directory to clone the infra repo without wiping out the backend code
+                    dir('infra-repo-tmp') {
+                        // 1. Securely clone the infra repo using the PAT
+                        sh "git clone https://${GIT_PAT_USR}:${GIT_PAT_PSW}@${INFRA_REPO_URL} ."
+                        
+                        // 2. Configure Git user for the commit
+                        sh "git config user.email 'jenkins@alumnilab.local'"
+                        sh "git config user.name 'Jenkins Pipeline'"
+                        
+                        // 3. Update the Image Tag inside the backend values.yaml file using 'sed'
+                        // Make sure this path is exactly where your backend values.yaml lives inside the infra repo!
+                        def valuesFile = "charts/alumni-backend/values.yaml"
+                        
+                        sh """
+                           # Find the line starting with 'tag:' and replace it with the new build number
+                           sed -i 's/tag: .*/tag: \"${IMAGE_TAG}\"/' ${valuesFile}
+                        """
+                        
+                        // 4. Commit and Push back to GitHub
+                        sh """
+                           git add ${valuesFile}
+                           git commit -m "Automated CI/CD: Update backend tag to ${IMAGE_TAG}"
+                           git push origin mainw
+                        """
+                    }
                 }
             }
         }
@@ -44,7 +80,8 @@ pipeline {
     
     post {
         always {
-            sh " /usr/local/bin/docker logout ${REGISTRY_URL}"
+            // Clean up Docker credentials and workspace
+            sh "docker logout ${REGISTRY_URL}"
             cleanWs()
         }
     }
