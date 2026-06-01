@@ -11,7 +11,7 @@ pipeline {
                 command: ['cat']
                 tty: true
                 securityContext:
-                  runAsUser: 0      # <-- ADD THIS LINE to fix permissions
+                  runAsUser: 0
                 volumeMounts:
                 - mountPath: /var/run/docker.sock
                   name: docker-sock
@@ -108,7 +108,7 @@ pipeline {
             container('docker') {
                 sh "docker logout ${REGISTRY_URL} || true"
             }
-            deleteDir()  # <-- CHANGED from cleanWs()
+            deleteDir()
         }
     }
 }
