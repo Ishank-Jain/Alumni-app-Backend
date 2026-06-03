@@ -34,9 +34,7 @@ pipeline {
         IMAGE_TAG = "v${BUILD_NUMBER}"
         
         NEXUS_CREDS = credentials('nexus-creds')
-        GIT_PAT = credentials('github-pat') 
-        
-        INFRA_REPO_URL = "github.com/Riyag012/git-infra-repo"
+        // Removed GIT_PAT from here; we call it directly inside the GitOps stage now!
     }
 
     stages {
@@ -66,8 +64,9 @@ pipeline {
             steps {
                 container('docker') {
                     script {
-                        sh 'echo ${NEXUS_CREDS_PSW} | docker login ${REGISTRY_URL} -u ${NEXUS_CREDS_USR} --password-stdin'
-                        sh 'docker push ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}'
+                        // Safe shell execution using single quotes
+                        sh 'echo $NEXUS_CREDS_PSW | docker login $REGISTRY_URL -u $NEXUS_CREDS_USR --password-stdin'
+                        sh 'docker push $REGISTRY_URL/$IMAGE_NAME:$IMAGE_TAG'
                     }
                 }
             }
@@ -77,7 +76,12 @@ pipeline {
             steps {
                 script {
                     dir('infra-repo-tmp') {
-                        sh "git clone https://${GIT_PAT_USR}:${GIT_PAT_PSW}@${INFRA_REPO_URL} ."
+                        // Explicitly pull the username and password from the vault
+                        withCredentials([usernamePassword(credentialsId: 'github-pat', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+                            // Single quotes here are CRITICAL. Do not change to double quotes.
+                            sh 'git clone https://$GIT_USER:$GIT_PASS@github.com/Riyag012/git-infra-repo.git .'
+                        }
+                        
                         sh "git config user.email 'jenkins@alumnilab.local'"
                         sh "git config user.name 'Jenkins Pipeline'"
                         
