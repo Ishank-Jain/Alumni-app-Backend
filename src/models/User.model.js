@@ -123,6 +123,25 @@ const UserSchema = new mongoose.Schema(
       enum: ["not_submitted", "pending", "verified", "rejected"],
       default: "not_submitted",
     },
+
+    // --- NEW: Mentorship Fields ---
+    isMentor: { 
+      type: Boolean, 
+      default: false 
+    },
+    
+    mentorDetails: {
+      expertise: String,
+      experience: String,
+      linkedinUrl: String,
+      maxStudents: { type: Number, default: 5 }
+    },
+    
+    enrolledStudents: [{ 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'User' 
+    }],
+    // ------------------------------
   },
   {
     timestamps: true,

@@ -1,12 +1,8 @@
 const express = require("express");
 const router = express.Router();
-
 const mentorshipController = require("../../controllers/mentorship.controller");
-
 const verifyToken = require("../../middlewares/verifyToken");
-
 const syncMongoUser = require("../../middlewares/syncMongoUser");
-
 const checkRole = require("../../middlewares/checkRole");
 
 /**
@@ -14,7 +10,42 @@ const checkRole = require("../../middlewares/checkRole");
  * /api/v1/mentorship
  */
 
-/* ---------------- PUBLIC ---------------- */
+/* -------------- PROTECTED STATIC ROUTES (Must go BEFORE /:id) --------------- */
+
+/**
+ * My mentorship profile (Original Flow)
+ */
+router.get(
+  "/me/profile",
+  verifyToken,
+  syncMongoUser,
+  mentorshipController.getMyMentorship
+);
+
+/**
+ * NEW: Get current user's mentor details and enrolled students (Dashboard Flow)
+ */
+router.get(
+  "/me",
+  verifyToken,
+  syncMongoUser,
+  checkRole("admin", "alumni"),
+  mentorshipController.getMyMentorshipDetails
+);
+
+/**
+ * NEW: Register as a mentor instantly via User Model
+ */
+router.post(
+  "/register",
+  verifyToken,
+  syncMongoUser,
+  checkRole("admin", "alumni"),
+  mentorshipController.registerMentor
+);
+
+
+/* ---------------- PUBLIC DYNAMIC ROUTES ---------------- */
 
 /**
  * Get all approved mentors
@@ -22,32 +53,22 @@ const checkRole = require("../../middlewares/checkRole");
 router.get("/", mentorshipController.getAllMentorships);
 
 /**
- * Get mentor by id
+ * Get mentor by id (WARNING: Dynamic params must always go after static routes like /me)
  */
 router.get("/:id", mentorshipController.getMentorshipById);
 
-/* -------------- PROTECTED --------------- */
+
+/* -------------- PROTECTED DYNAMIC ROUTES --------------- */
 
 /**
- * My mentorship profile
- */
-router.get(
-  "/me/profile",
-  verifyToken,
-  syncMongoUser,
-  mentorshipController.getMyMentorship,
-);
-
-/**
- * Become mentor / create profile
- * student / alumni / admin
+ * Become mentor / create profile (Original Service Flow)
  */
 router.post(
   "/",
   verifyToken,
   syncMongoUser,
   checkRole("student", "alumni", "admin"),
-  mentorshipController.createMentorship,
+  mentorshipController.createMentorship
 );
 
 /**
@@ -58,7 +79,7 @@ router.put(
   verifyToken,
   syncMongoUser,
   checkRole("student", "alumni", "mentor", "admin"),
-  mentorshipController.updateMentorship,
+  mentorshipController.updateMentorship
 );
 
 /**
@@ -69,7 +90,7 @@ router.delete(
   verifyToken,
   syncMongoUser,
   checkRole("student", "alumni", "mentor", "admin"),
-  mentorshipController.deleteMentorship,
+  mentorshipController.deleteMentorship
 );
 
 /**
@@ -81,7 +102,7 @@ router.patch(
   verifyToken,
   syncMongoUser,
   checkRole("admin"),
-  mentorshipController.updateMentorshipStatus,
+  mentorshipController.updateMentorshipStatus
 );
 
 module.exports = router;

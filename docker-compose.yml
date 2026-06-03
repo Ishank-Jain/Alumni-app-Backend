@@ -11,6 +11,8 @@ services:
       - MONGO_URI=mongodb://admin:adminpassword@alumni-mongo:27017/alumni_db?authSource=admin
       - NODE_ENV=development
       # We will add Keycloak/Kafka URLs here next if your backend env requires them
+      - NOTIFICATION_SERVICE_URL=http://notification-api:3000
+      - KEYCLOAK_JWKS_URI=http://alumni-keycloak:8080/realms/application/protocol/openid-connect/certs
     networks:
       - alumni-network
 

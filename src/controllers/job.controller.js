@@ -1,3 +1,4 @@
+// src/controllers/job.controller.js
 const jobService = require("../services/job.service");
 
 /**
@@ -38,8 +39,7 @@ const getJobById = async (req, res, next) => {
 
 /**
  * POST /api/v1/jobs
- * Protected:
- * verifyToken + checkRole("admin","alumni")
+ * Protected: verifyToken + syncMongoUser + checkRole("admin","alumni")
  */
 const createJob = async (req, res, next) => {
   try {
@@ -47,24 +47,44 @@ const createJob = async (req, res, next) => {
       ...req.body,
 
       /**
-       * Main identity mapping
+       * Main identity mapping (Use MongoDB ID if available, fallback to Keycloak sub)
        */
-      createdBy: req.user.sub,
+      createdBy: req.dbUser ? req.dbUser._id : req.user.sub,
 
       /**
-       * JWT token data
+       * JWT / DB data
        */
-      createdByUsername:
-        req.user.preferred_username,
+      createdByUsername: req.user.preferred_username || req.user.email,
 
-      createdByRole:
-        req.user.realm_access?.roles?.includes("admin")
-          ? "admin"
-          : "user"
+      // NEW: Accurately grab the role from MongoDB instead of hardcoding "user"
+      createdByRole: req.dbUser ? req.dbUser.role : (req.user.realm_access?.roles?.includes("admin") ? "admin" : "student")
     };
 
-    const job =
-      await jobService.createJob(payload);
+    const job = await jobService.createJob(payload);
+
+    // --- NOTIFICATION LOGIC ---
+    try {
+      const notificationUrl = process.env.NOTIFICATION_SERVICE_URL || 'http://notification-api:3000';
+      
+      // We don't await this fetch so it doesn't block the API response
+      fetch(`${notificationUrl}/api/v1/notify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channels: ['slack'], // Only trigger the Slack worker
+          priority: 'normal',
+          payload: {
+            title: 'New Job Opportunity Posted! 💼',
+            body: `*${job.title || 'Untitled Job'}*\n*Company:* ${job.company || 'N/A'}\n*Posted by:* ${payload.createdByUsername}`
+          }
+        })
+      }).catch(err => console.error("Notification API unreachable:", err.message));
+      
+      console.log("Job creation event published to Slack");
+    } catch (error) {
+      console.error("Failed to publish job notification:", error.message);
+    }
+    // ------------------------------
 
     res.status(201).json({
       success: true,
@@ -77,17 +97,13 @@ const createJob = async (req, res, next) => {
   }
 };
 
+
 /**
  * PUT /api/v1/jobs/:id
- * Only admin route middleware should handle access
  */
 const updateJob = async (req, res, next) => {
   try {
-    const job =
-      await jobService.updateJob(
-        req.params.id,
-        req.body
-      );
+    const job = await jobService.updateJob(req.params.id, req.body);
 
     res.status(200).json({
       success: true,

@@ -19,4 +19,12 @@ router.get(
   authController.me
 );
 
+// NEW: Complete Profile Route (Phase 2 State Machine)
+router.post(
+  "/complete-profile",
+  verifyToken,
+  syncMongoUser,
+  authController.completeProfile
+);
+
 module.exports = router;

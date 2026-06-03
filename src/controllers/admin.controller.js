@@ -28,14 +28,17 @@ const getPendingUsers = async (req, res, next) => {
   }
 };
 
+// src/controllers/admin.controller.js
+
 const approveUser = async (req, res, next) => {
   try {
     const user = await User.findByIdAndUpdate(
       req.params.id,
       {
         status: "approved",
+        isVerified: true,  // <-- PHASE 3 MASTER KEY: Unlocks the frontend
         approvedAt: new Date(),
-        approvedBy: req.dbUser ? req.dbUser._id : null, // Safe fallback if testing without auth
+        approvedBy: req.dbUser ? req.dbUser._id : null, 
       },
       { new: true },
     );
@@ -44,28 +47,35 @@ const approveUser = async (req, res, next) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-// PUBLISH NOTIFICATION TO EMAIL AND SLACK
+    // --- TRIGGER APPROVAL NOTIFICATION ---
     try {
-      // Use the environment variable, fallback to localhost for local dev
-      const notificationUrl = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3000';
+      const notificationUrl = process.env.NOTIFICATION_SERVICE_URL || 'http://notification-api:3000';
+      
+      // Sandbox override for local testing
+      const targetEmail = process.env.NODE_ENV === 'development' 
+        ? 'avimaheshwari04@gmail.com' 
+        : user.email;
 
-      await fetch(`${notificationUrl}/api/v1/notify`, {
+      // Non-blocking fetch
+      fetch(`${notificationUrl}/api/v1/notify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          channels: ['email', 'slack'], // Tell BOTH workers to fire!
-          recipients: [user.email],
+          channels: ['email', 'slack'], // Slack + Email
+          recipients: [targetEmail],
           priority: 'high',
           payload: {
             title: 'Alumni Network - Account Verified 🎉',
-            body: `Hello ${user.firstName}, your account has been officially verified by the admin team. Welcome to the network!`
+            body: `Hello ${user.firstName},\n\nYour account has been officially verified by the admin team. Welcome to the network! You can now log in and access all features.`
           }
         })
-      });
-      console.log("Approval event published to Notification API");
+      }).catch(err => console.error("Notification API unreachable:", err.message));
+      
+      console.log("Approval event sent to Notification API");
     } catch (error) {
       console.error("Failed to publish approval event:", error.message);
     }
+    // -------------------------------------
 
     res.json({
       success: true,
@@ -83,9 +93,14 @@ const rejectUser = async (req, res, next) => {
       req.params.id,
       {
         status: "rejected",
+        isVerified: false, // <-- Enforces the lock
       },
       { new: true },
     );
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
 
     res.json({
       success: true,

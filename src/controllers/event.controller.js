@@ -62,6 +62,28 @@ const createEvent = async (req, res, next) => {
 
     const event = await eventService.createEvent(payload);
 
+
+    // --- NEW NOTIFICATION LOGIC ---
+    try {
+      const notificationUrl = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3000';
+      await fetch(`${notificationUrl}/api/v1/notify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channels: ['slack'], // Only trigger the Slack worker
+          priority: 'normal',
+          payload: {
+            title: 'New Event Scheduled! 📅',
+            body: `*${event.title || 'Untitled Event'}*\n*Organizer:* ${payload.organizerName}\n*Date:* ${event.date ? new Date(event.date).toLocaleDateString() : 'TBD'}`
+          }
+        })
+      });
+      console.log("Event creation published to Slack");
+    } catch (error) {
+      console.error("Failed to publish event notification:", error.message);
+    }
+    // ------------------------------
+
     res.status(201).json({
       success: true,
       message: "Event created successfully",
