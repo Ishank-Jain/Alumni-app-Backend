@@ -7,6 +7,7 @@ const syncMongoUser = async (req, res, next) => {
     const token = req.user; 
     const sub = token.sub;
     const roles = token.realm_access?.roles || [];
+    const email = token.email;
 
     // --- PHASE 1: PARSE JWT FOR ADMIN ROLE ---
     const isAdmin = roles.includes("admin");
@@ -18,7 +19,13 @@ const syncMongoUser = async (req, res, next) => {
     else if (roles.includes("mentor")) appRole = "mentor";
     else if (roles.includes("alumni")) appRole = "alumni";
 
-    let user = await User.findOne({ keycloakSub: sub });
+    // 🟢 FIX: Look up user by keycloakSub OR email to handle identity provider resets/migrations gracefully
+    let user = await User.findOne({
+      $or: [
+        { keycloakSub: sub },
+        { email: email }
+      ]
+    });
 
     // --- PHASE 1: ADMIN BOOTSTRAP LOGIC ---
     if (isAdmin) {
@@ -26,8 +33,8 @@ const syncMongoUser = async (req, res, next) => {
         // Auto-create Admin with all locks bypassed
         user = await User.create({
           keycloakSub: sub,
-          username: token.preferred_username || token.email,
-          email: token.email,
+          username: token.preferred_username || email,
+          email: email,
           firstName: token.given_name || "Super",
           lastName: token.family_name || "Admin",
           role: "admin",
@@ -38,7 +45,9 @@ const syncMongoUser = async (req, res, next) => {
         });
         console.log("Super Admin bootstrapped successfully in MongoDB.");
       } else {
-        // Ensure an existing admin hasn't lost access due to schema changes
+        // 🟢 FIX: Sync identity updates if the admin's Keycloak details shifted during migration
+        user.keycloakSub = sub;
+        user.username = token.preferred_username || email;
         user.role = "admin";
         user.status = "approved";
         user.isVerified = true;
@@ -52,8 +61,8 @@ const syncMongoUser = async (req, res, next) => {
       if (!user) {
         user = await User.create({
           keycloakSub: sub,
-          username: token.preferred_username || token.email,
-          email: token.email,
+          username: token.preferred_username || email,
+          email: email,
           firstName: token.given_name || "",
           lastName: token.family_name || "",
           role: appRole,
@@ -62,30 +71,12 @@ const syncMongoUser = async (req, res, next) => {
           profileCompleted: false,    // Default state
           lastLoginAt: new Date(),
         });
-
-/*         // PRESERVED: Your working notification logic for new users
-        try {
-          const userEmail = user.email; 
-          const userName = user.firstName || 'Alumni';
-          const notificationUrl = process.env.NOTIFICATION_SERVICE_URL || 'http://notification-api:3000';
-          
-          fetch(`${notificationUrl}/api/v1/notify`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              channels: ['email'], 
-              recipients: [userEmail], 
-              priority: 'high',
-              payload: {
-                title: 'Account Verification Pending ⏳', 
-                body: `Hi ${userName},\n\nYour profile has been submitted successfully! It is currently pending verification by our admin team.`
-              }
-            })
-          }).catch(err => console.error("Notification API unreachable:", err.message));
-        } catch (error) {
-          console.error("Failed to trigger pending verification email:", error.message);
-        } */
       } else {
+        // 🟢 FIX: Handle user identity migration seamlessly without crashing on duplicate emails
+        if (user.keycloakSub !== sub) {
+          user.keycloakSub = sub; // Map their existing MongoDB entry to their new Keycloak profile
+          user.username = token.preferred_username || email;
+        }
         user.lastLoginAt = new Date();
         await user.save();
       }
