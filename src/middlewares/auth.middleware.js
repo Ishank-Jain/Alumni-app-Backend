@@ -33,7 +33,7 @@ const protect = async (req, res, next) => {
     // 🔹 4. Allow alumni/admin
     req.user = user;
     next();
-  } catch (err) {
+  } catch {
     return res.status(500).json({
       success: false,
       message: "Server error",

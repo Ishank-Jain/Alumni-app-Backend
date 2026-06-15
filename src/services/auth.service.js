@@ -47,6 +47,7 @@ try {
 };
 
 // Login
+// eslint-disable-next-line no-unused-vars
 const loginUser = async ({ email, password }) => {
   const user = await User.findOne({ email }).select('+password');
 
@@ -58,6 +59,7 @@ const loginUser = async ({ email, password }) => {
 };
 
 // Logout (simple)
+// eslint-disable-next-line no-unused-vars
 const logoutUser = async (userId) => {
   return true;
 };
