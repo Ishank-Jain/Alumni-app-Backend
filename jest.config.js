@@ -6,4 +6,7 @@ module.exports = {
     'src/**/*.js',
     '!src/server.js', // We exclude the main server file because starting the server in tests can cause port conflicts
   ],
+  moduleNameMapper: {
+    '^jwks-rsa$': '<rootDir>/tests/__mocks__/jwks-rsa.js'
+  }
 };
