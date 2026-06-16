@@ -5,6 +5,47 @@ const cors = require('cors');
 const app = express()
 app.set('trust proxy', true);
 
+// // ==========================================
+// // TEMPORARY OBSERVABILITY TEST ROUTE
+
+// const mongoose = require('mongoose');
+// const { trace } = require('@opentelemetry/api');
+
+// // Create a custom tracer just for this test
+// const tracer = trace.getTracer('manual-test-tracer');
+
+// app.get('/api/v1/test-trace', async (req, res) => {
+  
+//   // 1. FORCIBLY start a span in the waterfall named "MongoDB-Direct-Hit"
+//   await tracer.startActiveSpan('MongoDB-Direct-Hit', async (span) => {
+//     try {
+      
+//       // 2. Do the database work
+//       const collections = await mongoose.connection.db.listCollections().toArray();
+      
+//       // 3. Attach nice labels to the span for Grafana
+//       span.setAttribute('db.system', 'mongodb');
+//       span.setAttribute('db.operation', 'listCollections');
+//       span.setStatus({ code: 1 }); // 1 = OK
+      
+//       res.status(200).json({ 
+//         message: "Check Tempo! You should see a span named 'MongoDB-Direct-Hit'", 
+//         collectionsFound: collections.length 
+//       });
+
+//     } catch (err) {
+//       span.recordException(err);
+//       span.setStatus({ code: 2, message: err.message }); // 2 = Error
+//       res.status(500).json({ error: "DB hit failed" });
+//     } finally {
+//       // 4. CRITICAL: End the span so it gets sent to Tempo
+//       span.end(); 
+//     }
+//   });
+
+// });
+// ==========================================
+
 const morgan = require('morgan');
 const { trace } = require('@opentelemetry/api');
 
