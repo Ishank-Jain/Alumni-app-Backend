@@ -72,6 +72,7 @@ if (!endpoint) {
 
 const sdk = new NodeSDK({
   traceExporter: new OTLPTraceExporter({ url: `${endpoint}/v1/traces` }),
+  spanProcessor: new BatchSpanProcessor(new OTLPTraceExporter({ url: `${endpoint}/v1/traces` })),
   
   // 2. FIXED THIS LINE (No inline require)
   metricReader: new PeriodicExportingMetricReader({
