@@ -80,7 +80,6 @@ const sdk = new NodeSDK({
     exportIntervalMillis: 60000
   }),
   
-  spanProcessor: new BatchSpanProcessor(new OTLPTraceExporter({ url: `${endpoint}/v1/traces` })),
   instrumentations: [
     getNodeAutoInstrumentations({
       '@opentelemetry/instrumentation-http': {
